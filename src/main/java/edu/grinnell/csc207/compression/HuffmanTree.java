@@ -22,6 +22,7 @@ public class HuffmanTree {
 
     private Node head;
     private Map<String, Short> huffMap;
+    private Map<Short, String> reverseHuffMap;
 
     /**
      * Constructs a new HuffmanTree from a frequency map.
@@ -29,9 +30,6 @@ public class HuffmanTree {
      * @param freqs a map from 9-bit values to frequencies.
      */
     public HuffmanTree(Map<Short, Integer> freqs) {
-
-        //include EOF with frequency of 1
-        freqs.put((short) 256, 1);
 
         PriorityQueue queue = new PriorityQueue();
 
@@ -46,7 +44,7 @@ public class HuffmanTree {
             Node first = (Node) queue.pop();
             Node second = (Node) queue.pop();
 
-            Node newNode = new Node(null, (int) first.getKey() + (int) second.getKey(), first, second);
+            Node newNode = new Node(null, (int) first.getValue() + (int) second.getValue(), first, second);
 
             //add new node to queue
             queue.add(newNode);
@@ -57,6 +55,8 @@ public class HuffmanTree {
 
         //generate huffcodes map
         huffMap = new HashMap<>();
+        reverseHuffMap = new HashMap<>();
+
         generateHuffmanCodes(head, "");
     }
 
@@ -68,8 +68,9 @@ public class HuffmanTree {
     public HuffmanTree(BitInputStream in) {
         head = buildTreeRecursive(in);
 
-        //generate huffcodes map
+        //generate huffcodes maps
         huffMap = new HashMap<>();
+        reverseHuffMap = new HashMap<>();
         generateHuffmanCodes(head, "");
     }
 
@@ -87,8 +88,9 @@ public class HuffmanTree {
         if (newBit == 0) {
             short key = (short) in.readBits(9);
 
-            //create new nodee with empty value fields
+            //create new node with empty value fields
             return new Node(key, null);
+
         } //not a leaf node
         else {
             Node left = buildTreeRecursive(in);
@@ -116,7 +118,6 @@ public class HuffmanTree {
             out.writeBit(0);
             out.writeBits((short) curr.getKey(), 9);
         } else {
-            //write left
             out.writeBit(1);
             writeTreeRecursive(out, curr.left);
             writeTreeRecursive(out, curr.right);
@@ -132,51 +133,42 @@ public class HuffmanTree {
      * @param out the file to write the compressed output to.
      */
     public void encode(BitInputStream in, BitOutputStream out) {
-        String currentByteBuffer = "";
         while (in.hasBits()) {
-            short read = (short) in.readBit();
-            currentByteBuffer += read;
-
-            //write buffer contents to out
-            if (huffMap.containsValue(Short.valueOf(currentByteBuffer))) {
-                String key = getKeyByValue(huffMap, Short.valueOf(currentByteBuffer));
-
-                out.writeBits(Integer.parseInt(key), key.length()); // ie base 2,
-
-                //clear buffer to restart
-                currentByteBuffer = "";
+            int read = in.readBits(8);
+            //EOF encountered
+            if (read == -1) {
+                break;
             }
+            short character = (short) read;
+
+            // Get Huffman code for symbol
+            String code = reverseHuffMap.get(character);
+            for (char c : code.toCharArray()) {
+                out.writeBit(c == '1' ? 1 : 0);
+            }
+        }
+
+        // Write EOF marker
+        String eofCode = reverseHuffMap.get((short) 256);
+        for (char c : eofCode.toCharArray()) {
+            out.writeBit(c == '1' ? 1 : 0);
         }
     }
 
+    //Credit:https://stackoverflow.com/a/2904266
     private void generateHuffmanCodes(Node curr, String currentCode) {
         //is leaf node
         if (curr.left == null && curr.right == null) {
-            huffMap.put(currentCode, (short) curr.getKey());
+            short symbol = (short) curr.getKey();
+
+            huffMap.put(currentCode, symbol);
+            reverseHuffMap.put(symbol, currentCode);
+
         } //is internal
         else {
             generateHuffmanCodes(curr.left, currentCode + "0");
             generateHuffmanCodes(curr.right, currentCode + "1");
         }
-    }
-
-    //Credit:https://stackoverflow.com/a/2904266
-    /**
-     * Gets the key of a specific value in a 1 to 1 hashmap
-     *
-     * @param <T>
-     * @param <E>
-     * @param map
-     * @param value
-     * @return
-     */
-    public static <T, E> T getKeyByValue(Map<T, E> map, E value) {
-        for (Entry<T, E> entry : map.entrySet()) {
-            if (Objects.equals(value, entry.getValue())) {
-                return entry.getKey();
-            }
-        }
-        return null;
     }
 
     /**
@@ -189,20 +181,33 @@ public class HuffmanTree {
      * @param out the file to write the decompressed output to.
      */
     public void decode(BitInputStream in, BitOutputStream out) {
-        String currentByteBuffer = "";
+
+        Node current = head;
 
         while (in.hasBits()) {
-            short read = (short) in.readBit();
-            currentByteBuffer += read;
-
-            //write buffer contents to out
-            if (huffMap.containsKey(currentByteBuffer)) {
-                out.writeBits(huffMap.get(currentByteBuffer), currentByteBuffer.length());
-
-                //clear buffer to restart
-                currentByteBuffer = "";
+            int bit = in.readBit();
+            if (bit == -1) {
+                break;
             }
 
+            //walk tree and decode
+            current = (bit == 0) ? current.left : current.right;
+
+            // Reached a leaf node
+            if (current.left == null && current.right == null) {
+                short character = (short) current.getKey();
+
+                // EOF check
+                if (character == 256) {
+                    break;
+                }
+
+                // wrtie symbol
+                out.writeBits(character, 8);
+
+                // reset
+                current = head;
+            }
         }
     }
 }
