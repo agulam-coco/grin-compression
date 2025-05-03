@@ -1,11 +1,7 @@
 package edu.grinnell.csc207.compression;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
 
 /**
  * A HuffmanTree derives a space-efficient coding of a collection of byte
@@ -44,7 +40,8 @@ public class HuffmanTree {
             Node first = (Node) queue.pop();
             Node second = (Node) queue.pop();
 
-            Node newNode = new Node(null, (int) first.getValue() + (int) second.getValue(), first, second);
+            Node newNode = new Node(null, (int) first.getValue() + (int) second.getValue(),
+                    first, second);
 
             //add new node to queue
             queue.add(newNode);
@@ -90,9 +87,7 @@ public class HuffmanTree {
 
             //create new node with empty value fields
             return new Node(key, null);
-
-        } //not a leaf node
-        else {
+        } else {
             Node left = buildTreeRecursive(in);
             Node right = buildTreeRecursive(in);
 
@@ -109,9 +104,15 @@ public class HuffmanTree {
      */
     public void serialize(BitOutputStream out) {
         writeTreeRecursive(out, head);
-
     }
 
+    /**
+     * Recursive method to write a huffman tre to the our node in compressed
+     * form
+     *
+     * @param out the out stream
+     * @param curr the current node to write
+     */
     private void writeTreeRecursive(BitOutputStream out, Node curr) {
         //is leaf node
         if (curr.left == null && curr.right == null) {
@@ -156,6 +157,14 @@ public class HuffmanTree {
     }
 
     //Credit:https://stackoverflow.com/a/2904266
+    /**
+     * Recrusive function to generate the huffman codes hash map both ways for
+     * codes to symbols and symbols to codes
+     *
+     * @param curr the current node to check
+     * @param currentCode the concatenated code which should be stored or
+     * recursed
+     */
     private void generateHuffmanCodes(Node curr, String currentCode) {
         //is leaf node
         if (curr.left == null && curr.right == null) {
@@ -163,9 +172,7 @@ public class HuffmanTree {
 
             huffMap.put(currentCode, symbol);
             reverseHuffMap.put(symbol, currentCode);
-
-        } //is internal
-        else {
+        } else {
             generateHuffmanCodes(curr.left, currentCode + "0");
             generateHuffmanCodes(curr.right, currentCode + "1");
         }
@@ -181,7 +188,6 @@ public class HuffmanTree {
      * @param out the file to write the decompressed output to.
      */
     public void decode(BitInputStream in, BitOutputStream out) {
-
         Node current = head;
 
         while (in.hasBits()) {

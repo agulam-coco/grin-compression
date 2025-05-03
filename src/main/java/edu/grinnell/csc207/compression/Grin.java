@@ -34,7 +34,7 @@ public class Grin {
 
             HuffmanTree tree = new HuffmanTree(in);
             tree.decode(in, out);
-            
+
             in.close();
             out.close();
 
@@ -47,6 +47,7 @@ public class Grin {
 
     /**
      * Checks if inputed number is the GRIN magic number
+     *
      * @param magicNumber number to be checked
      * @return true or false
      */
@@ -106,10 +107,10 @@ public class Grin {
             out.writeBits(MAGIC_NUMBER, 32);
             tree.serialize(out);
             tree.encode(in, out);
-            
+
             in.close();
             out.close();
-            
+
         } catch (IOException e) {
             System.out.println("Invlaid file path provided");
             e.printStackTrace();
@@ -120,13 +121,13 @@ public class Grin {
     /**
      * Entry point for the Grin program.
      *
-     * Usage: java Grin <encode|decode> <infile> <outfile>
-     *
      * @param args command-line arguments
      */
     public static void main(String[] args) {
         if (args.length != 3) {
-            throw new IllegalArgumentException("Invalid number of arguments. Usage: java Grin <encode|decode> <infile> <outfile>");
+            throw new IllegalArgumentException(
+"Invalid number of arguments. Usage: java Grin <encode|decode> <infile> <outfile>"
+            );
         }
 
         String command = args[0];
@@ -139,7 +140,9 @@ public class Grin {
             case "decode" ->
                 decode(infile, outfile);
             default ->
-                throw new IllegalArgumentException("Invalid command '" + command + "'. Expected 'encode' or 'decode'.");
+                throw new IllegalArgumentException(
+                        "Invalid command '" + command + "'. Expected 'encode' or 'decode'."
+                );
         }
     }
 
